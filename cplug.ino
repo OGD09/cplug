@@ -189,7 +189,11 @@ void handleRoot() {
                 "<h1>Relay Control</h1>"
                 "<p>Relay state: <span id='relayState'>" + String(relayState ? "On" : "Off") + "</span></p>"
 
-                "<button class='button' onclick='toggleRelay()'>Toggle Relay</button>"
+                // Toggle relay button
+                "<button class='button' onclick='toggleRelay()'>Toggle Relay</button><br>"
+
+                // Link to the configuration page
+                "<a href='/config' class='button'>Configure Wi-Fi</a>"
 
                 "<script>"
                 "function toggleRelay() {"
