@@ -11,8 +11,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // LCD I2C address 0x27 with 16 columns and 
 const int relayPin = 15;       // GPIO pin connected to the relay
 const int buttonPin = 4;       // GPIO pin connected to the self-lock push button
 bool relayState = LOW;         // Initial state of the relay (LOW = off)
+bool buttonPressed = false;    // State to track if the button is pressed
 uint8_t previousClientCount = 0; // To track changes in connected clients
-bool buttonHoldOverride = false; // To track button hold priority
 
 uint8_t newMACAddress[] = {0x02, 0x65, 0x32, 0xac, 0x81, 0x4b};
 String newHostname = "cplug1";
@@ -24,42 +24,10 @@ const char* apPassword = "**cplug1**";       // Access point password
 String ssid = "";
 String password = "";
 
-// Function to display a temporary message on LCD and return to base screen after 5 seconds
-void displayTempMessage(String line1, String line2 = "") {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(line1);
-  if (line2 != "") {
-    lcd.setCursor(0, 1);
-    lcd.print(line2);
-  }
-  delay(5000); // Display message for 5 seconds
-  updateBaseScreen(); // Return to base screen
-}
-
-// Function to update the base screen based on connection status
-void updateBaseScreen() {
-  lcd.clear();
-  if (WiFi.status() == WL_CONNECTED) {
-    // Connected to WiFi, show IP for connection
-    lcd.setCursor(0, 0);
-    lcd.print("Connect to:");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP());
-  } else {
-    // Access Point mode, show SSID and password
-    lcd.setCursor(0, 0);
-    lcd.print("SSID: " + String(apSSID));
-    lcd.setCursor(0, 1);
-    lcd.print("Pass: " + String(apPassword));
-  }
-}
-
 void setup() {
   Serial.begin(115200);                // Initialize serial communication at 115200 baud rate
   lcd.init();                          // Initialize the LCD
   lcd.backlight();                     // Turn on the LCD backlight
-  updateBaseScreen();                  // Set initial base screen
 
   WiFi.mode(WIFI_STA);
   Serial.print("[OLD] ESP32 MAC Address:  ");
@@ -100,66 +68,20 @@ void setup() {
 }
 
 void loop() {
-  static String lastDisplayedText = "";
-  static bool buttonPreviousState = HIGH;
-  static unsigned long buttonPressTime = 0;
-  const unsigned long BUTTON_DEBOUNCE_DELAY = 50;     // Debounce delay in milliseconds
-  const unsigned long BUTTON_LONG_PRESS_TIME = 1000;  // Long press duration
-
+  // Handle the web server
   server.handleClient();
 
-  bool buttonCurrentState = digitalRead(buttonPin);
-  unsigned long currentTime = millis();
-
-  // Debounce button handling
-  if (buttonCurrentState != buttonPreviousState) {
-    delay(BUTTON_DEBOUNCE_DELAY);
-    buttonCurrentState = digitalRead(buttonPin);
+  // Check the button state
+  if (digitalRead(buttonPin) == LOW) {
+    // If the button is pressed, keep the relay ON
+    buttonPressed = true;
+    relayState = HIGH;
+    digitalWrite(relayPin, relayState);
+    return; // Skip the rest of the loop while button is active
+  } else if (buttonPressed) {
+    // If the button was pressed but is now released, restore normal control
+    buttonPressed = false;
   }
-
-  if (buttonCurrentState == LOW && buttonPreviousState == HIGH) {
-    // Button just pressed
-    buttonPressTime = currentTime;
-    buttonHoldOverride = false;
-  }
-
-  if (buttonCurrentState == LOW) {
-    // Button is being held
-    if (currentTime - buttonPressTime >= BUTTON_LONG_PRESS_TIME) {
-      // Long press detected
-      if (!buttonHoldOverride) {
-        relayState = HIGH;
-        digitalWrite(relayPin, relayState);
-        buttonHoldOverride = true;
-        Serial.println("Relay ON (Long Press)");
-
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Button Control:");
-        lcd.setCursor(0, 1);
-        lcd.print("Relay ON (Held)");
-      }
-    }
-  }
-  else if (buttonCurrentState == HIGH && buttonPreviousState == LOW) {
-    // Button released
-    if (!buttonHoldOverride) {
-      // Short press: toggle relay
-      relayState = !relayState;
-      digitalWrite(relayPin, relayState);
-      Serial.println(relayState ? "Relay ON (Short Press)" : "Relay OFF (Short Press)");
-    } else {
-      // Release from long press
-      relayState = LOW;
-      digitalWrite(relayPin, relayState);
-      buttonHoldOverride = false;
-      Serial.println("Relay OFF (Button Released)");
-    }
-    
-    updateBaseScreen();
-  }
-
-  buttonPreviousState = buttonCurrentState;
 
   // Update the LCD display based on the AP client connection status
   uint8_t clientCount = WiFi.softAPgetStationNum(); // Get the number of connected clients
@@ -180,7 +102,6 @@ void loop() {
       lcd.print(String("SSID:") + apSSID);
       lcd.setCursor(0, 1);
       lcd.print(String("Pass:") + apPassword);
-      delay(2000); // Display SSID briefly
     }
   }
 }
@@ -204,11 +125,19 @@ void connectToWiFi() {
     Serial.print("IP Address: ");               // Show assigned IP address
     Serial.println(WiFi.localIP());
 
-    // Update base screen with connection info
-    updateBaseScreen();
+    // Display connected IP on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("IP:");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.localIP());
   } else {
     Serial.println("\nFailed to connect to Wi-Fi."); // Print failure message
-    displayTempMessage("WiFi Connect", "Failed");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Failed to connect");
+    lcd.setCursor(0, 1);
+    lcd.print("to Wi-Fi.");
   }
 }
 
@@ -219,8 +148,29 @@ void startAccessPoint() {
   Serial.print("Access Point IP: ");     // Print the IP address for clients
   Serial.println(WiFi.softAPIP());
 
-  // Update base screen with AP info
-  updateBaseScreen();
+  // Display AP SSID and IP on LCD for configuration
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("AP SSID:");
+  lcd.setCursor(0, 1);
+  lcd.print(apSSID);
+
+  delay(2000); // Display AP SSID briefly before showing IP
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Connect IP:");
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.softAPIP());
+}
+
+// Function to toggle the relay state via API
+void handleToggle() {
+  if (!buttonPressed) { // Allow toggling only if the button is not pressed
+    relayState = !relayState;              // Invert the current state
+    digitalWrite(relayPin, relayState);    // Set the relay to the new state
+  }
+  server.send(200, "text/plain", relayState ? "1" : "0"); // Send the new state as plain text ("1" for on, "0" for off)
 }
 
 // Function to handle the root web page, which displays relay state and control options
@@ -239,74 +189,23 @@ void handleRoot() {
                 "<h1>Relay Control</h1>"
                 "<p>Relay state: <span id='relayState'>" + String(relayState ? "On" : "Off") + "</span></p>"
 
-                // Link to toggle relay state
-                "<a href='#' class='button' onclick=\"toggleRelay()\">Toggle Relay</a><br>"
-
-                // Link to Wi-Fi configuration page
-                "<a href=\"/config\" class='button'>Configure Wi-Fi</a>"
+                "<button class='button' onclick='toggleRelay()'>Toggle Relay</button>"
 
                 "<script>"
                 "function toggleRelay() {"
-                "  let stateElement = document.getElementById('relayState');"
-                "  let currentState = stateElement.innerText;"
-                "  "
-                "  // Optimistic UI update"
-                "  stateElement.innerText = (currentState === 'On') ? 'Off' : 'On';"
-                "  "
-                "  let xhr = new XMLHttpRequest();"
+                "  var xhr = new XMLHttpRequest();"
                 "  xhr.open('GET', '/toggle', true);"
-                "  xhr.timeout = 2000; // 2-second timeout"
-                "  "
-                "  xhr.onreadystatechange = function() {"
-                "    if (xhr.readyState === 4) {"
-                "      if (xhr.status === 200) {"
-                "        console.log('Toggle response:', xhr.responseText);"
-                "        stateElement.innerText = xhr.responseText === '1' ? 'On' : 'Off';"
-                "      } else {"
-                "        console.error('Toggle failed, reverting state');"
-                "        stateElement.innerText = currentState;"
-                "      }"
+                "  xhr.onload = function() {"
+                "    if (xhr.status === 200) {"
+                "      document.getElementById('relayState').innerText = xhr.responseText === '1' ? 'On' : 'Off';"
                 "    }"
                 "  };"
-                "  "
-                "  xhr.onerror = function() {"
-                "    console.error('Network error');"
-                "    stateElement.innerText = currentState;"
-                "  };"
-                "  "
                 "  xhr.send();"
-                "}"
-                "function holdRelay() { fetch('/hold'); }"       // Send request to hold relay
-                "function releaseRelay() { fetch('/toggle'); }"  // Send request to release relay
-                "function fiveSecRelay() {"                      // Activate relay for 5 seconds
-                "  fetch('/5sec')"
-                "    .then(response => response.text())"
-                "    .then(state => {"
-                "      document.getElementById('relayState').innerText = state === '1' ? 'On' : 'Off';"
-                "    });"
                 "}"
                 "</script>"
                 "</body></html>";
   server.send(200, "text/html", html);   // Send the HTML page to the client
 }
-
-// Function to toggle the relay state
-void handleToggle() {
-  // Si le bouton est actuellement maintenu enfoncé, ignorer la demande de toggle
-  if (buttonHoldOverride) {
-    server.send(200, "text/plain", "1"); // Renvoyer que le relais reste ON
-    return;
-  }
-
-  relayState = !relayState;              
-  digitalWrite(relayPin, relayState);    
-  
-  displayTempMessage("Relay:", relayState ? "Turned ON" : "Turned OFF");
-  
-  server.send(200, "text/plain", relayState ? "1" : "0");
-}
-
-
 
 // Function to display Wi-Fi configuration page with SSID and password fields
 void handleConfig() {
@@ -359,9 +258,6 @@ void handleSave() {
   Serial.println(preferences.getString("ssid", ""));
   Serial.print("Stored Password: ");
   Serial.println(preferences.getString("password", ""));
-
-  // Display temporary message about configuration save
-  displayTempMessage("WiFi Config", "Saved & Restart");
 
   // Confirmation page HTML
   String html = "<!DOCTYPE html><html><head><title>Configuration Saved</title>"
