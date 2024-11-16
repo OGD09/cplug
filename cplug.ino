@@ -93,8 +93,6 @@ void setup() {
   // Define routes for the web server
   server.on("/", handleRoot);              // Root route, main page
   server.on("/toggle", handleToggle);      // Route to toggle the relay
-  server.on("/hold", handleHold);          // Route to hold the relay while clicking
-  server.on("/5sec", handle5Sec);          // Route to activate relay for 5 seconds
   server.on("/config", handleConfig);      // Route for Wi-Fi configuration page
   server.on("/save", HTTP_POST, handleSave); // Route to save Wi-Fi settings
 
@@ -220,12 +218,6 @@ void handleRoot() {
                 // Link to toggle relay state
                 "<a href='#' class='button' onclick=\"toggleRelay()\">Toggle Relay</a><br>"
 
-                // Link to hold relay while pressing and release on mouse up
-                "<a href='#' class='button' onmousedown=\"holdRelay()\" onmouseup=\"releaseRelay()\">Hold Relay</a><br>"
-
-                // Link to activate relay for 5 seconds
-                "<a href='#' class='button' onclick=\"fiveSecRelay()\">5 Second Toggle</a><br>"
-
                 // Link to Wi-Fi configuration page
                 "<a href=\"/config\" class='button'>Configure Wi-Fi</a>"
 
@@ -267,41 +259,7 @@ void handleToggle() {
   server.send(200, "text/plain", relayState ? "1" : "0");
 }
 
-// Function to hold the relay state as long as the button is held down
-void handleHold() {
-  // Similaire pour handleHold
-  if (buttonHoldOverride) {
-    server.send(200, "text/plain", "1");
-    return;
-  }
 
-  relayState = HIGH;                    
-  digitalWrite(relayPin, relayState);   
-  server.send(200, "text/plain", "1");  
-}
-
-// Function to activate the relay for 5 seconds
-void handle5Sec() {
-  // Et pour handle5Sec
-  if (buttonHoldOverride) {
-    server.send(200, "text/plain", "1");
-    return;
-  }
-
-  relayState = HIGH;                    
-  digitalWrite(relayPin, relayState);   
-  
-  displayTempMessage("Relay:", "5-sec activation");
-  
-  server.send(200, "text/plain", "1");  
-  delay(5000);                          
-  
-  // Ne pas éteindre si le bouton est toujours maintenu
-  if (!buttonHoldOverride) {
-    relayState = LOW;                     
-    digitalWrite(relayPin, relayState);   
-  }
-}
 
 // Function to display Wi-Fi configuration page with SSID and password fields
 void handleConfig() {
