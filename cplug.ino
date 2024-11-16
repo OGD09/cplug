@@ -102,37 +102,61 @@ void setup() {
 void loop() {
   static String lastDisplayedText = "";
   static bool buttonPreviousState = HIGH;
+  static unsigned long buttonPressTime = 0;
+  const unsigned long BUTTON_DEBOUNCE_DELAY = 50;     // Debounce delay in milliseconds
+  const unsigned long BUTTON_LONG_PRESS_TIME = 1000;  // Long press duration
 
   server.handleClient();
 
   bool buttonCurrentState = digitalRead(buttonPin);
+  unsigned long currentTime = millis();
+
+  // Debounce button handling
+  if (buttonCurrentState != buttonPreviousState) {
+    delay(BUTTON_DEBOUNCE_DELAY);
+    buttonCurrentState = digitalRead(buttonPin);
+  }
+
+  if (buttonCurrentState == LOW && buttonPreviousState == HIGH) {
+    // Button just pressed
+    buttonPressTime = currentTime;
+    buttonHoldOverride = false;
+  }
 
   if (buttonCurrentState == LOW) {
-    if (buttonPreviousState == HIGH) {
-      relayState = HIGH;
-      digitalWrite(relayPin, relayState);
-      buttonHoldOverride = true; // Activer la priorité du bouton
-      Serial.println("Relay ON (Button Pressed)");
+    // Button is being held
+    if (currentTime - buttonPressTime >= BUTTON_LONG_PRESS_TIME) {
+      // Long press detected
+      if (!buttonHoldOverride) {
+        relayState = HIGH;
+        digitalWrite(relayPin, relayState);
+        buttonHoldOverride = true;
+        Serial.println("Relay ON (Long Press)");
 
-      String currentText = "Button Control:\nRelay ON (Held)";
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Button Control:");
-      lcd.setCursor(0, 1);
-      lcd.print("Relay ON (Held)");
-      lastDisplayedText = currentText;
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Button Control:");
+        lcd.setCursor(0, 1);
+        lcd.print("Relay ON (Held)");
+      }
     }
-  } 
-  else {
-    if (buttonPreviousState == LOW) {
+  }
+  else if (buttonCurrentState == HIGH && buttonPreviousState == LOW) {
+    // Button released
+    if (!buttonHoldOverride) {
+      // Short press: toggle relay
+      relayState = !relayState;
+      digitalWrite(relayPin, relayState);
+      Serial.println(relayState ? "Relay ON (Short Press)" : "Relay OFF (Short Press)");
+    } else {
+      // Release from long press
       relayState = LOW;
       digitalWrite(relayPin, relayState);
-      buttonHoldOverride = false; // Désactiver la priorité du bouton
+      buttonHoldOverride = false;
       Serial.println("Relay OFF (Button Released)");
-      
-      updateBaseScreen();
-      lastDisplayedText = "";
     }
+    
+    updateBaseScreen();
   }
 
   buttonPreviousState = buttonCurrentState;
