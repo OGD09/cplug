@@ -12,6 +12,7 @@ const int relayPin = 15;       // GPIO pin connected to the relay
 const int buttonPin = 4;       // GPIO pin connected to the self-lock push button
 bool relayState = LOW;         // Initial state of the relay (LOW = off)
 uint8_t previousClientCount = 0; // To track changes in connected clients
+bool buttonHoldOverride = false; // To track button hold priority
 
 uint8_t newMACAddress[] = {0x02, 0x65, 0x32, 0xac, 0x81, 0x4b};
 String newHostname = "cplug1";
@@ -104,21 +105,17 @@ void loop() {
   static String lastDisplayedText = "";
   static bool buttonPreviousState = HIGH;
 
-  // Handle the web server
   server.handleClient();
 
-  // Check if the self-lock push button is pressed
   bool buttonCurrentState = digitalRead(buttonPin);
 
   if (buttonCurrentState == LOW) {
-    // Bouton enfoncé
     if (buttonPreviousState == HIGH) {
-      // Changement d'état du bouton (vient d'être enfoncé)
       relayState = HIGH;
       digitalWrite(relayPin, relayState);
+      buttonHoldOverride = true; // Activer la priorité du bouton
       Serial.println("Relay ON (Button Pressed)");
 
-      // Mise à jour de l'affichage
       String currentText = "Button Control:\nRelay ON (Held)";
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -129,11 +126,10 @@ void loop() {
     }
   } 
   else {
-    // Bouton relâché
     if (buttonPreviousState == LOW) {
-      // Changement d'état du bouton (vient d'être relâché)
       relayState = LOW;
       digitalWrite(relayPin, relayState);
+      buttonHoldOverride = false; // Désactiver la priorité du bouton
       Serial.println("Relay OFF (Button Released)");
       
       updateBaseScreen();
@@ -141,7 +137,6 @@ void loop() {
     }
   }
 
-  // Mise à jour de l'état précédent du bouton
   buttonPreviousState = buttonCurrentState;
 
   // Update the LCD display based on the AP client connection status
@@ -258,34 +253,54 @@ void handleRoot() {
 
 // Function to toggle the relay state
 void handleToggle() {
-  relayState = !relayState;              // Invert the current state
-  digitalWrite(relayPin, relayState);    // Set the relay to the new state
+  // Si le bouton est actuellement maintenu enfoncé, ignorer la demande de toggle
+  if (buttonHoldOverride) {
+    server.send(200, "text/plain", "1"); // Renvoyer que le relais reste ON
+    return;
+  }
+
+  relayState = !relayState;              
+  digitalWrite(relayPin, relayState);    
   
-  // Display temporary message about relay state
   displayTempMessage("Relay:", relayState ? "Turned ON" : "Turned OFF");
   
-  server.send(200, "text/plain", relayState ? "1" : "0"); // Send the new state as plain text ("1" for on, "0" for off)
+  server.send(200, "text/plain", relayState ? "1" : "0");
 }
 
 // Function to hold the relay state as long as the button is held down
 void handleHold() {
-  relayState = HIGH;                    // Set relay to ON while button is pressed
-  digitalWrite(relayPin, relayState);   // Set relay to ON
-  server.send(200, "text/plain", "1");  // Confirm relay is ON
+  // Similaire pour handleHold
+  if (buttonHoldOverride) {
+    server.send(200, "text/plain", "1");
+    return;
+  }
+
+  relayState = HIGH;                    
+  digitalWrite(relayPin, relayState);   
+  server.send(200, "text/plain", "1");  
 }
 
 // Function to activate the relay for 5 seconds
 void handle5Sec() {
-  relayState = HIGH;                    // Set relay to ON for 5 seconds
-  digitalWrite(relayPin, relayState);   // Set relay to ON
+  // Et pour handle5Sec
+  if (buttonHoldOverride) {
+    server.send(200, "text/plain", "1");
+    return;
+  }
+
+  relayState = HIGH;                    
+  digitalWrite(relayPin, relayState);   
   
-  // Display temporary message about 5-second relay activation
   displayTempMessage("Relay:", "5-sec activation");
   
-  server.send(200, "text/plain", "1");  // Confirm relay is ON
-  delay(5000);                          // Wait for 5 seconds
-  relayState = LOW;                     // Turn relay back OFF
-  digitalWrite(relayPin, relayState);   // Set relay to OFF
+  server.send(200, "text/plain", "1");  
+  delay(5000);                          
+  
+  // Ne pas éteindre si le bouton est toujours maintenu
+  if (!buttonHoldOverride) {
+    relayState = LOW;                     
+    digitalWrite(relayPin, relayState);   
+  }
 }
 
 // Function to display Wi-Fi configuration page with SSID and password fields
