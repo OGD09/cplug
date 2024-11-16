@@ -75,12 +75,12 @@ void loop() {
   if (digitalRead(buttonPin) == LOW) {
     // If the button is pressed, keep the relay ON
     buttonPressed = true;
-    relayState = HIGH;
-    digitalWrite(relayPin, relayState);
-    return; // Skip the rest of the loop while button is active
+    digitalWrite(relayPin, HIGH); // Ensure the relay is ON
   } else if (buttonPressed) {
-    // If the button was pressed but is now released, restore normal control
+    // If the button was previously pressed and is now released
     buttonPressed = false;
+    relayState = LOW; // Reset the relay state
+    digitalWrite(relayPin, relayState); // Turn off the relay
   }
 
   // Update the LCD display based on the AP client connection status
