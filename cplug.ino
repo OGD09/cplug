@@ -23,10 +23,42 @@ const char* apPassword = "**cplug1**";       // Access point password
 String ssid = "";
 String password = "";
 
+// Function to display a temporary message on LCD and return to base screen after 5 seconds
+void displayTempMessage(String line1, String line2 = "") {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(line1);
+  if (line2 != "") {
+    lcd.setCursor(0, 1);
+    lcd.print(line2);
+  }
+  delay(5000); // Display message for 5 seconds
+  updateBaseScreen(); // Return to base screen
+}
+
+// Function to update the base screen based on connection status
+void updateBaseScreen() {
+  lcd.clear();
+  if (WiFi.status() == WL_CONNECTED) {
+    // Connected to WiFi, show IP for connection
+    lcd.setCursor(0, 0);
+    lcd.print("Connect to:");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.localIP());
+  } else {
+    // Access Point mode, show SSID and password
+    lcd.setCursor(0, 0);
+    lcd.print("SSID: " + String(apSSID));
+    lcd.setCursor(0, 1);
+    lcd.print("Pass: " + String(apPassword));
+  }
+}
+
 void setup() {
   Serial.begin(115200);                // Initialize serial communication at 115200 baud rate
   lcd.init();                          // Initialize the LCD
   lcd.backlight();                     // Turn on the LCD backlight
+  updateBaseScreen();                  // Set initial base screen
 
   WiFi.mode(WIFI_STA);
   Serial.print("[OLD] ESP32 MAC Address:  ");
@@ -132,19 +164,11 @@ void connectToWiFi() {
     Serial.print("IP Address: ");               // Show assigned IP address
     Serial.println(WiFi.localIP());
 
-    // Display connected IP on LCD
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("IP:");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP());
+    // Update base screen with connection info
+    updateBaseScreen();
   } else {
     Serial.println("\nFailed to connect to Wi-Fi."); // Print failure message
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Failed to connect");
-    lcd.setCursor(0, 1);
-    lcd.print("to Wi-Fi.");
+    displayTempMessage("WiFi Connect", "Failed");
   }
 }
 
@@ -155,20 +179,8 @@ void startAccessPoint() {
   Serial.print("Access Point IP: ");     // Print the IP address for clients
   Serial.println(WiFi.softAPIP());
 
-  // Display AP SSID and IP on LCD for configuration
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("AP SSID:");
-  lcd.setCursor(0, 1);
-  lcd.print(apSSID);
-
-  delay(2000); // Display AP SSID briefly before showing IP
-
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Connect IP:");
-  lcd.setCursor(0, 1);
-  lcd.print(WiFi.softAPIP());
+  // Update base screen with AP info
+  updateBaseScreen();
 }
 
 // Function to handle the root web page, which displays relay state and control options
@@ -225,6 +237,10 @@ void handleRoot() {
 void handleToggle() {
   relayState = !relayState;              // Invert the current state
   digitalWrite(relayPin, relayState);    // Set the relay to the new state
+  
+  // Display temporary message about relay state
+  displayTempMessage("Relay:", relayState ? "Turned ON" : "Turned OFF");
+  
   server.send(200, "text/plain", relayState ? "1" : "0"); // Send the new state as plain text ("1" for on, "0" for off)
 }
 
@@ -239,6 +255,10 @@ void handleHold() {
 void handle5Sec() {
   relayState = HIGH;                    // Set relay to ON for 5 seconds
   digitalWrite(relayPin, relayState);   // Set relay to ON
+  
+  // Display temporary message about 5-second relay activation
+  displayTempMessage("Relay:", "5-sec activation");
+  
   server.send(200, "text/plain", "1");  // Confirm relay is ON
   delay(5000);                          // Wait for 5 seconds
   relayState = LOW;                     // Turn relay back OFF
@@ -296,6 +316,9 @@ void handleSave() {
   Serial.println(preferences.getString("ssid", ""));
   Serial.print("Stored Password: ");
   Serial.println(preferences.getString("password", ""));
+
+  // Display temporary message about configuration save
+  displayTempMessage("WiFi Config", "Saved & Restart");
 
   // Confirmation page HTML
   String html = "<!DOCTYPE html><html><head><title>Configuration Saved</title>"
