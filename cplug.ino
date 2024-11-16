@@ -118,7 +118,7 @@ void loop() {
     lcd.print(relayState ? "Relay ON" : "Relay OFF");
 
     delay(500); // Debounce delay
-    return; // Skip the rest of the loop while button control is active
+    updateBaseScreen(); // Revenir à l'écran de base après un court délai
   }
 
   // Update the LCD display based on the AP client connection status
