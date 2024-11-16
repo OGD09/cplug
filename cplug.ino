@@ -101,25 +101,48 @@ void setup() {
 }
 
 void loop() {
+  static String lastDisplayedText = "";
+  static bool buttonPreviousState = HIGH;
+
   // Handle the web server
   server.handleClient();
 
   // Check if the self-lock push button is pressed
-  if (digitalRead(buttonPin) == LOW) {
-    relayState = !relayState;         // Toggle the relay state
-    digitalWrite(relayPin, relayState);
-    Serial.println(relayState ? "Relay ON (via button)" : "Relay OFF (via button)");
+  bool buttonCurrentState = digitalRead(buttonPin);
 
-    // Display the relay state on the LCD
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Button Control:");
-    lcd.setCursor(0, 1);
-    lcd.print(relayState ? "Relay ON" : "Relay OFF");
+  if (buttonCurrentState == LOW) {
+    // Bouton enfoncé
+    if (buttonPreviousState == HIGH) {
+      // Changement d'état du bouton (vient d'être enfoncé)
+      relayState = HIGH;
+      digitalWrite(relayPin, relayState);
+      Serial.println("Relay ON (Button Pressed)");
 
-    delay(500); // Debounce delay
-    updateBaseScreen(); // Revenir à l'écran de base après un court délai
+      // Mise à jour de l'affichage
+      String currentText = "Button Control:\nRelay ON (Held)";
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Button Control:");
+      lcd.setCursor(0, 1);
+      lcd.print("Relay ON (Held)");
+      lastDisplayedText = currentText;
+    }
+  } 
+  else {
+    // Bouton relâché
+    if (buttonPreviousState == LOW) {
+      // Changement d'état du bouton (vient d'être relâché)
+      relayState = LOW;
+      digitalWrite(relayPin, relayState);
+      Serial.println("Relay OFF (Button Released)");
+      
+      updateBaseScreen();
+      lastDisplayedText = "";
+    }
   }
+
+  // Mise à jour de l'état précédent du bouton
+  buttonPreviousState = buttonCurrentState;
 
   // Update the LCD display based on the AP client connection status
   uint8_t clientCount = WiFi.softAPgetStationNum(); // Get the number of connected clients
