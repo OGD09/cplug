@@ -1,7 +1,0 @@
-.gitignore
-venv*
-.aider*
-.env
-session1
-.notes
-settings.json
