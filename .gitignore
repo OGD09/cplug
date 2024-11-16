@@ -1,2 +1,7 @@
 venv*
 .aider*
+.env
+session1
+.notes
+.gitignore
+settings.json
