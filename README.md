@@ -3,7 +3,8 @@
 This project is a smart plug powered by an ESP32 microcontroller, which controls a relay to switch connected devices on or off. The relay can be controlled through a simple and intuitive web interface, using API calls over the network. The device also displays relevant information on an I2C LCD screen and includes a physical button for direct control of the relay, ensuring usability even without network access.
 
 ### Assembled Device
-<img src="img/cplug.jpg" alt="Assembled Device Example" width="300">
+<img src="img/cplug.jpg" alt="Assembled Device" width="300">
+<img src="img/cguts.jpg" alt="Device's guts" width="200">
 
 ## Features
 
