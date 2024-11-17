@@ -4,10 +4,11 @@ This project is a smart plug powered by an ESP32 microcontroller, which controls
 
 ### Assembled Device
 ![diagram](img/cplug_diagram_clear.png)
-<div style="display: flex; justify-content: space-around;">
+<div style="display: flex; justify-content: space-around; margin: auto; width: 80%; text-align: center;">
   <img src="img/cplug.jpg" alt="Assembled Device" height="200">
   <img src="img/cguts.jpg" alt="Device's guts" height="200">
 </div>
+
 
 
 ## Features
