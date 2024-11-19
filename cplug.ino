@@ -259,14 +259,14 @@ void handleSave() {
   Serial.println(preferences.getString("password", ""));
 
   // Confirmation page HTML
-  String html = "<!DOCTYPE html><html><head><title>Configuration Enregistrée</title>"
+  String html = "<!DOCTYPE html><html><head><title>Configuration Saved</title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
                 "h1 { color: #007bff; }"
                 "p { font-size: 1.1em; }"
                 "</style>"
-                "</head><body><h1>Configuration Enregistrée</h1>"
-                "<p>L'appareil va maintenant tenter de se connecter au réseau WiFi.</p>"
+                "</head><body><h1>Configuration Saved</h1>"
+                "<p>The device will now attempt to connect to the WiFi network.</p>"
                 "</body></html>";
   server.send(200, "text/html", html); // Send confirmation page to client
 
