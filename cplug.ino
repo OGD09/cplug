@@ -230,7 +230,8 @@ void handleConfig() {
                 "<label for=\"password\">Password:</label>"
                 "<input type=\"password\" name=\"password\" id=\"password\" required>"
                 "<input type=\"checkbox\" onclick=\"togglePassword()\"> Show password<br><br>" // Checkbox to toggle password visibility
-                "<input type=\"submit\" value=\"Save\">"    // Submit button
+                "<input type=\"submit\" value=\"Save\" style=\"margin-right: 10px;\">"    // Submit button
+                "<a href=\"/\" class=\"button\" style=\"display: inline-block; padding: 10px 20px; text-decoration: none; color: white; background-color: #6c757d; border-radius: 5px;\">Home</a>"
                 "</form>"
                 "<script>"
                 "function togglePassword() {"              // JavaScript function to toggle password visibility
