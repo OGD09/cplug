@@ -212,7 +212,7 @@ void handleRoot() {
 void handleConfig() {
   // HTML form for Wi-Fi configuration page with password visibility toggle and a link to return to the main page
   String html = "<!DOCTYPE html><html><head>"
-                "<title>Wi-Fi Configuration Requise</title>"
+                "<title>WiFi Configuration Required</title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
                 "h1 { color: #ff0000; }"
@@ -223,15 +223,15 @@ void handleConfig() {
                 "input[type='submit']:hover { background-color: #0056b3; }"
                 "</style>"
                 "</head><body>"
-                "<h1>Configuration WiFi Requise</h1>"
-                "<p>Veuillez configurer le réseau WiFi pour continuer.</p>"
+                "<h1>WiFi Configuration Required</h1>"
+                "<p>Please configure the WiFi network to continue.</p>"
                 "<form action=\"/save\" method=\"POST\">"   // Form to enter SSID and password
                 "<label for=\"ssid\">SSID:</label>"
                 "<input type=\"text\" name=\"ssid\" id=\"ssid\" required><br>"
                 "<label for=\"password\">Password:</label>"
                 "<input type=\"password\" name=\"password\" id=\"password\" required>"
-                "<input type=\"checkbox\" onclick=\"togglePassword()\"> Afficher le mot de passe<br><br>" // Checkbox to toggle password visibility
-                "<input type=\"submit\" value=\"Enregistrer\">"    // Submit button
+                "<input type=\"checkbox\" onclick=\"togglePassword()\"> Show password<br><br>" // Checkbox to toggle password visibility
+                "<input type=\"submit\" value=\"Save\">"    // Submit button
                 "</form>"
                 "<script>"
                 "function togglePassword() {"              // JavaScript function to toggle password visibility
