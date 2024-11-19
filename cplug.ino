@@ -273,3 +273,9 @@ void handleSave() {
   delay(2000);   // Wait for 2 seconds before restarting
   ESP.restart(); // Restart ESP32 to attempt Wi-Fi connection with new credentials
 }
+// Function to handle captive portal and redirect all requests to configuration page
+void handleCaptivePortal() {
+  // Redirect all requests to the configuration page
+  server.sendHeader("Location", "/config", true);
+  server.send(302, "text/plain", "");
+}
