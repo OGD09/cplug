@@ -70,7 +70,8 @@ This project is a smart plug powered by an ESP32 microcontroller, which controls
 
 1. **Initial Configuration**:
    - When powered on for the first time, the ESP32 will start in AP mode. The LCD will display the SSID and password for the AP.
-   - Connect to the AP and navigate to the displayed URL to configure Wi-Fi credentials.
+   - Connect to the AP, and a captive portal will automatically open, guiding you to the network configuration page.
+   - Navigate through the captive portal to configure Wi-Fi credentials.
 
 2. **Relay Control**:
    - Access the web interface at the URL displayed on the LCD to toggle the relay state.
