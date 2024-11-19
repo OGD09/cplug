@@ -3,9 +3,12 @@
 #include <Preferences.h>       // Library to manage non-volatile storage (NVS)
 #include <esp_wifi.h>          // Library for ESP32 Wi-Fi functions (for MAC address setting)
 #include <LiquidCrystal_I2C.h> // Library for I2C LCD
+#include <DNSServer.h>         // Library for DNS server to implement captive portal
 
 Preferences preferences;       // Create a Preferences object for storing Wi-Fi credentials
 WebServer server(80);          // Create a web server on port 80
+DNSServer dnsServer;           // Create a DNS server for captive portal
+const byte DNS_PORT = 53;      // Standard DNS port
 LiquidCrystal_I2C lcd(0x27, 16, 2); // LCD I2C address 0x27 with 16 columns and 2 rows
 
 const int relayPin = 15;       // GPIO pin connected to the relay
@@ -60,16 +63,23 @@ void setup() {
     startAccessPoint();
   }
 
+  // Start DNS server for captive portal
+  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+
   // Define routes for the web server
   server.on("/", handleRoot);              // Root route, main page
   server.on("/toggle", handleToggle);      // Route to toggle the relay
   server.on("/config", handleConfig);      // Route for Wi-Fi configuration page
   server.on("/save", HTTP_POST, handleSave); // Route to save Wi-Fi settings
+  server.onNotFound(handleCaptivePortal);  // Redirect all unknown requests to config page
 
   server.begin();   // Start the web server
 }
 
 void loop() {
+  // Process DNS requests for captive portal
+  dnsServer.processNextRequest();
+
   // Handle the web server
   server.handleClient();
 
@@ -202,29 +212,27 @@ void handleRoot() {
 void handleConfig() {
   // HTML form for Wi-Fi configuration page with password visibility toggle and a link to return to the main page
   String html = "<!DOCTYPE html><html><head>"
-                "<title>Wi-Fi Configuration</title>"
+                "<title>Wi-Fi Configuration Requise</title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
-                "h1 { color: #444; }"
+                "h1 { color: #ff0000; }"
                 "form { display: inline-block; margin-top: 20px; text-align: left; }"
                 "label { font-weight: bold; display: block; margin-bottom: 5px; }"
                 "input[type='text'], input[type='password'] { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }"
                 "input[type='submit'] { padding: 10px 20px; font-size: 1em; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; }"
                 "input[type='submit']:hover { background-color: #0056b3; }"
-                ".button { padding: 10px 20px; font-size: 1em; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; text-decoration: none; display: inline-block; margin-top: 15px; }"
-                ".button:hover { background-color: #0056b3; }"
                 "</style>"
                 "</head><body>"
-                "<h1>Wi-Fi Configuration</h1>"
+                "<h1>Configuration WiFi Requise</h1>"
+                "<p>Veuillez configurer le réseau WiFi pour continuer.</p>"
                 "<form action=\"/save\" method=\"POST\">"   // Form to enter SSID and password
                 "<label for=\"ssid\">SSID:</label>"
                 "<input type=\"text\" name=\"ssid\" id=\"ssid\" required><br>"
                 "<label for=\"password\">Password:</label>"
                 "<input type=\"password\" name=\"password\" id=\"password\" required>"
-                "<input type=\"checkbox\" onclick=\"togglePassword()\"> Show Password<br><br>" // Checkbox to toggle password visibility
-                "<input type=\"submit\" value=\"Save\">"    // Submit button
+                "<input type=\"checkbox\" onclick=\"togglePassword()\"> Afficher le mot de passe<br><br>" // Checkbox to toggle password visibility
+                "<input type=\"submit\" value=\"Enregistrer\">"    // Submit button
                 "</form>"
-                "<a href=\"/\" class=\"button\">Return to Main Page</a>" // Link styled as a button for returning to main page
                 "<script>"
                 "function togglePassword() {"              // JavaScript function to toggle password visibility
                 "  var passwordField = document.getElementById('password');"
@@ -251,14 +259,14 @@ void handleSave() {
   Serial.println(preferences.getString("password", ""));
 
   // Confirmation page HTML
-  String html = "<!DOCTYPE html><html><head><title>Configuration Saved</title>"
+  String html = "<!DOCTYPE html><html><head><title>Configuration Enregistrée</title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
                 "h1 { color: #007bff; }"
                 "p { font-size: 1.1em; }"
                 "</style>"
-                "</head><body><h1>Configuration Saved</h1>"
-                "<p>The device will now attempt to connect to the Wi-Fi network.</p>"
+                "</head><body><h1>Configuration Enregistrée</h1>"
+                "<p>L'appareil va maintenant tenter de se connecter au réseau WiFi.</p>"
                 "</body></html>";
   server.send(200, "text/html", html); // Send confirmation page to client
 
