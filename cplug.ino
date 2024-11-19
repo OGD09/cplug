@@ -212,10 +212,10 @@ void handleRoot() {
 void handleConfig() {
   // HTML form for Wi-Fi configuration page with password visibility toggle and a link to return to the main page
   String html = "<!DOCTYPE html><html><head>"
-                "<title>WiFi Configuration Required</title>"
+                "<title><title>WiFi Configuration</title></title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
-                "h1 { color: #ff0000; }"
+                "h1 { color: #007bff; }"
                 "form { display: inline-block; margin-top: 20px; text-align: left; }"
                 "label { font-weight: bold; display: block; margin-bottom: 5px; }"
                 "input[type='text'], input[type='password'] { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }"
@@ -223,8 +223,7 @@ void handleConfig() {
                 "input[type='submit']:hover { background-color: #0056b3; }"
                 "</style>"
                 "</head><body>"
-                "<h1>WiFi Configuration Required</h1>"
-                "<p>Please configure the WiFi network to continue.</p>"
+                "<h1>WiFi Configuration</h1>"
                 "<form action=\"/save\" method=\"POST\">"   // Form to enter SSID and password
                 "<label for=\"ssid\">SSID:</label>"
                 "<input type=\"text\" name=\"ssid\" id=\"ssid\" required><br>"
