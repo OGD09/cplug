@@ -17,12 +17,15 @@ uint8_t previousClientCount = 0; // To track changes in connected clients
 uint8_t newMACAddress[] = {0x02, 0x65, 0x32, 0xac, 0x81, 0x4b};
 String newHostname = "cplug1";
 // Default credentials for the access point
-const char* apSSID = "cplug1";       // Access point SSID
-const char* apPassword = "**cplug1**";       // Access point password
+const char* apSSID = "CPLUG1";       // Access point SSID
+const char* apPassword = "**CPLUG1**";       // Access point password
 
 // Variables to store Wi-Fi credentials (SSID and password)
 String ssid = "";
 String password = "";
+
+// Variable to track the current display state
+String previousDisplayState = "";
 
 void setup() {
   Serial.begin(115200);                // Initialize serial communication at 115200 baud rate
@@ -48,13 +51,12 @@ void setup() {
   ssid = preferences.getString("ssid", "");     // Retrieve stored SSID, or empty if not set
   password = preferences.getString("password", "");  // Retrieve stored password, or empty if not set
 
-  // If Wi-Fi credentials are available, try connecting to Wi-Fi
+  // Try connecting to Wi-Fi or start AP if it fails
   if (ssid != "" && password != "") {
-    connectToWiFi();
-  }
-
-  // If the connection fails, start an access point for configuration
-  if (WiFi.status() != WL_CONNECTED) {
+    if (!connectToWiFi()) {
+      startAccessPoint();
+    }
+  } else {
     startAccessPoint();
   }
 
@@ -83,31 +85,12 @@ void loop() {
     digitalWrite(relayPin, relayState); // Turn off the relay
   }
 
-  // Update the LCD display based on the AP client connection status
-  uint8_t clientCount = WiFi.softAPgetStationNum(); // Get the number of connected clients
-  if (clientCount != previousClientCount) {
-    previousClientCount = clientCount; // Update the previous client count
-
-    if (clientCount > 0) {
-      // If a client is connected, show the AP IP address for configuration
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Config IP:");
-      lcd.setCursor(0, 1);
-      lcd.print(WiFi.softAPIP());
-    } else if (WiFi.status() != WL_CONNECTED) {
-      // If no client is connected and Wi-Fi is not connected, show SSID and password
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(String("SSID:") + apSSID);
-      lcd.setCursor(0, 1);
-      lcd.print(String("Pass:") + apPassword);
-    }
-  }
+  // Update the LCD display based on the current state
+  updateLCD();
 }
 
 // Function to connect to Wi-Fi using stored SSID and password
-void connectToWiFi() {
+bool connectToWiFi() {
   Serial.println("Connecting to Wi-Fi...");
   WiFi.begin(ssid.c_str(), password.c_str());  // Start Wi-Fi connection
 
@@ -124,20 +107,10 @@ void connectToWiFi() {
     Serial.println("\nConnected to Wi-Fi!");    // Print success message
     Serial.print("IP Address: ");               // Show assigned IP address
     Serial.println(WiFi.localIP());
-
-    // Display connected IP on LCD
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("IP:");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP());
+    return true;
   } else {
     Serial.println("\nFailed to connect to Wi-Fi."); // Print failure message
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Failed to connect");
-    lcd.setCursor(0, 1);
-    lcd.print("to Wi-Fi.");
+    return false;
   }
 }
 
@@ -147,21 +120,35 @@ void startAccessPoint() {
   WiFi.softAP(apSSID, apPassword);       // Start the access point with SSID and password
   Serial.print("Access Point IP: ");     // Print the IP address for clients
   Serial.println(WiFi.softAPIP());
+}
 
-  // Display AP SSID and IP on LCD for configuration
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("AP SSID:");
-  lcd.setCursor(0, 1);
-  lcd.print(apSSID);
+// Function to update the LCD display based on the current state
+void updateLCD() {
+  uint8_t clientCount = WiFi.softAPgetStationNum(); // Get the number of connected clients
+  String line1, line2;
 
-  delay(2000); // Display AP SSID briefly before showing IP
+  if (WiFi.status() == WL_CONNECTED || clientCount > 0) {
+    // If connected to Wi-Fi or in AP mode with a client, show the management IP address
+    line1 = "MANAGEMENT:";
+    line2 = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
+  } else {
+    // If in AP mode and no clients are connected, show the SSID and password
+    line1 = "WiFi:   " + String(apSSID);
+    line2 = "Pass: " + String(apPassword);
+  }
 
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Connect IP:");
-  lcd.setCursor(0, 1);
-  lcd.print(WiFi.softAPIP());
+  // Avoid updating the screen if the content is the same
+  String newDisplayState = line1 + line2;
+  if (newDisplayState != previousDisplayState) {
+    previousDisplayState = newDisplayState;
+
+    // Update the LCD display
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(line1.substring(0, 16)); // Ensure only 16 characters per line
+    lcd.setCursor(0, 1);
+    lcd.print(line2.substring(0, 16)); // Ensure only 16 characters per line
+  }
 }
 
 // Function to toggle the relay state via API
@@ -180,17 +167,17 @@ void handleRoot() {
                 "<title>Relay Control</title>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; text-align: center; background-color: #f3f3f9; color: #333; padding: 20px; }"
-                "h1 { color: #444; }"
+                "h1 { color: #444; text-transform: uppercase; }"
                 "#relayState { font-size: 1.2em; color: #007bff; font-weight: bold; }"
                 ".button { padding: 15px 30px; font-size: 1em; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; text-decoration: none; display: inline-block; margin: 10px 0; }"
                 ".button:hover { background-color: #0056b3; }"
                 "</style>"
                 "</head><body>"
-                "<h1>Relay Control</h1>"
-                "<p>Relay state: <span id='relayState'>" + String(relayState ? "On" : "Off") + "</span></p>"
+                "<h1>" + newHostname + "</h1>"
+                "<p><span id='relayState'>" + String(relayState ? "On" : "Off") + "</span></p>"
 
                 // Toggle relay button
-                "<button class='button' onclick='toggleRelay()'>Toggle Relay</button><br>"
+                "<button class='button' onclick='toggleRelay()'>Toggle</button><br>"
 
                 // Link to the configuration page
                 "<a href='/config' class='button'>Configure Wi-Fi</a>"
