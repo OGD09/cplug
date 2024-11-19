@@ -275,7 +275,17 @@ void handleSave() {
 }
 // Function to handle captive portal and redirect all requests to configuration page
 void handleCaptivePortal() {
+  // Diagnostic print statements
+  Serial.println("Captive Portal Triggered!");
+  Serial.print("Client IP: ");
+  Serial.println(server.client().remoteIP());
+  Serial.print("Requested URI: ");
+  Serial.println(server.uri());
+  
   // Redirect all requests to the configuration page
   server.sendHeader("Location", "/config", true);
-  server.send(302, "text/plain", "");
+  server.send(302, "text/plain", "Redirecting to configuration page");
+  
+  // Additional diagnostic information
+  Serial.println("Redirect sent to configuration page");
 }
